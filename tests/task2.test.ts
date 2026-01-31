@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   countUsersByEmailDomain,
   User
-} from "../src/emailDomains";
+} from "../src/task2";
 
 describe("countUsersByEmailDomain", () => {
     const users: User[] = [

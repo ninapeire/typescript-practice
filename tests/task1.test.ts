@@ -3,7 +3,7 @@ import {
   getUserNamesActiveInLastNDays,
   User,
   Activity
-} from "../src/activity";
+} from "../src/task1";
 
 describe("getUserNamesActiveInLastNDays", () => { // Creates a test suite
   // Fixture data
