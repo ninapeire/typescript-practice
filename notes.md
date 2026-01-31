@@ -6,8 +6,8 @@ const name: string = "Nina";
 let isActive: boolean = true;
 ```
 
-- **`const`** → the variable **cannot be reassigned**
-- **`let`** → the variable **can be reassigned**
+* **`const`** → the variable **cannot be reassigned**
+* **`let`** → the variable **can be reassigned**
 
 Type inference works (you don’t need to annotate everything):
 
@@ -61,11 +61,36 @@ Very common patterns:
 ```tsx
 users.map(u => u.name);
 users.filter(u => u.age && u.age > 18);
-users.filter(u => activeUserIds.includes(u.id))
+users.filter(u => activeUserIds.includes(u.id));
 users.find(u => u.id === "123");
 ```
 
-`==` is loose equality, `===` is strict equality
+* `==` is **loose equality** (does type coercion — avoid)
+* `===` is **strict equality** (same type + value — always use)
+
+### Iteration: `for...of` vs `for...in`
+
+```tsx
+for (const user of users) {
+  // value (User)
+}
+```
+
+* `for...of` iterates over **values** (arrays, strings, sets, maps)
+
+```tsx
+const counts: Record<string, number> = {};
+for (const key in counts) {
+  // key (string)
+}
+```
+
+* `for...in` iterates over **keys / property names** (objects / records)
+
+Rule of thumb:
+
+* Arrays → `for...of`
+* Objects / Records → `for...in`
 
 ## Async / Await (super important)
 
@@ -95,7 +120,7 @@ try {
 }
 ```
 
-## 7. Null / undefined (important gotcha)
+## Null / undefined (important gotcha)
 
 You’ll see this:
 
@@ -105,8 +130,8 @@ let user: User | undefined;
 
 Which means:
 
-- Could be a `User`
-- Or could be `undefined`
+* Could be a `User`
+* Or could be `undefined`
 
 You **must check**:
 
@@ -118,7 +143,29 @@ if (!user) {
 
 TS *forces* you to be explicit — this is a feature.
 
-## 8. Imports / Exports
+### Ternary operator vs nullish coalescing
+
+```tsx
+return user ? user.name : null;
+```
+
+* Ternary: `condition ? valueIfTrue : valueIfFalse`
+* Safe when `user` itself may be `undefined`
+
+```tsx
+return user?.name ?? null;
+```
+
+* Optional chaining (`?.`) safely accesses properties
+* Nullish coalescing (`??`) provides a fallback for `null | undefined`
+
+⚠️ Not safe:
+
+```tsx
+return user.name ?? null; // crashes if user is undefined
+```
+
+## Imports / Exports
 
 ```tsx
 export function add(a: number, b: number) {
