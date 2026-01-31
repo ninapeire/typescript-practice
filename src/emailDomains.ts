@@ -1,24 +1,17 @@
-type User = {
+export type User = {
   id: string;
   email: string;
 };
 
-const users: User[] = [
-  { id: "1", email: "alice@gmail.com" },
-  { id: "2", email: "bob@gmail.com" },
-  { id: "3", email: "carol@yahoo.com" }
-];
+export function countUsersByEmailDomain(
+  users: User[]
+): Record<string, number> {
+  const result: Record<string, number> = {};
 
+  for (const user of users) {
+    const domain: string = user.email.split("@").at(-1) ?? "";
+    result[domain] = (result[domain] ?? 0) + 1;
+  }
 
-
-
-
-
-// Goal
-// countUsersByEmailDomain(users);
-
-// Expected output:
-// {
-//   "gmail.com": 2,
-//   "yahoo.com": 1
-// }
+  return result;
+}
