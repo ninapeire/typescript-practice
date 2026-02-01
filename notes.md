@@ -1,118 +1,180 @@
-## Variables & basic types
+# TypeScript Interview Cheatsheet
 
-```tsx
+## Variables & Basic Types
+
+```ts
 let count: number = 5;
 const name: string = "Nina";
 let isActive: boolean = true;
 ```
 
-* **`const`** → the variable **cannot be reassigned**
-* **`let`** → the variable **can be reassigned**
+* `const` → cannot be reassigned
+* `let` → can be reassigned
+* Prefer `const` by default
 
-Type inference works (you don’t need to annotate everything):
+### Type inference
 
-```tsx
+```ts
 const age = 25; // inferred as number
 ```
 
+TypeScript infers types when it’s safe — explicit annotations are optional.
+
+---
+
 ## Functions
 
-```tsx
+```ts
 function add(a: number, b: number): number {
   return a + b;
 }
 ```
 
-Arrow functions (very common):
+Arrow functions:
 
-```tsx
+```ts
 const add = (a: number, b: number): number => a + b;
 ```
 
-If you forget the return type, TS often infers it.
+* Return types are usually inferred
+* Explicit return types are useful for public APIs
 
-## Objects: `type` and `interface`
+---
 
-```tsx
-type User = {
-  id: string;
+## Objects: `type` vs `interface`
+
+### Rule of thumb
+
+> **Objects & public contracts → `interface`**
+> **Everything else → `type`**
+
+---
+
+### `interface`
+
+Used for **object shapes that may be extended or augmented**.
+
+```ts
+interface User {
   name: string;
-  age?: number; // optional
-};
+  age?: number;
+}
 ```
 
-Usage:
+Key traits:
 
-```tsx
-const user: User = {
-  id: "123",
-  name: "Alice"
-};
+* **Open** (supports declaration merging)
+* Extendable via `extends`
+* Preferred for libraries, APIs, React props
+
+```ts
+interface Admin extends User {
+  role: string;
+}
 ```
 
-## Arrays & common operations
+---
 
-```tsx
+### `type`
+
+Used for **exact, closed definitions and composition**.
+
+```ts
+type UserId = string | number;
+type Status = 'idle' | 'loading' | 'error';
+```
+
+Supports:
+
+* unions
+* tuples
+* conditional & mapped types
+
+```ts
+type Result<T> =
+  | { status: 'ok'; value: T }
+  | { status: 'error'; error: string };
+```
+
+---
+
+### Mental model
+
+* `interface` → “others may build on this”
+* `type` → “this is exactly what this is”
+
+---
+
+## Arrays & Common Operations
+
+```ts
 const users: User[] = [];
 ```
 
-Very common patterns:
+Common patterns:
 
-```tsx
+```ts
 users.map(u => u.name);
 users.filter(u => u.age && u.age > 18);
-users.filter(u => activeUserIds.includes(u.id));
-users.find(u => u.id === "123");
+users.find(u => u.name === "Alice");
 ```
 
-* `==` is **loose equality** (does type coercion — avoid)
-* `===` is **strict equality** (same type + value — always use)
+Equality:
 
-### Iteration: `for...of` vs `for...in`
+* `===` → strict equality (**always use**)
+* `==` → loose equality (avoid)
 
-```tsx
+---
+
+## Iteration
+
+### `for...of` → values
+
+```ts
 for (const user of users) {
-  // value (User)
+  // user: User
 }
 ```
 
-* `for...of` iterates over **values** (arrays, strings, sets, maps)
+### `for...in` → keys
 
-```tsx
+```ts
 const counts: Record<string, number> = {};
 for (const key in counts) {
-  // key (string)
+  // key: string
 }
 ```
 
-* `for...in` iterates over **keys / property names** (objects / records)
-
-Rule of thumb:
+Rule:
 
 * Arrays → `for...of`
-* Objects / Records → `for...in`
+* Objects → `for...in`
 
-## Async / Await (super important)
+---
 
-If something is async, it returns a `Promise<T>`.
+## Async / Await
 
-```tsx
+Async functions return `Promise<T>`:
+
+```ts
 async function getUser(): Promise<User> {
-  return { id: "1", name: "Alice" };
+  return { name: "Alice" };
 }
 ```
 
 Usage:
 
-```tsx
+```ts
 const user = await getUser();
 ```
 
-If you forget `await`, you’ll have a `Promise<User>` — classic bug.
+⚠️ Forgetting `await` gives `Promise<User>` — common bug.
 
-## Error handling
+---
 
-```tsx
+## Error Handling
+
+```ts
 try {
   const user = await getUser();
 } catch (err) {
@@ -120,59 +182,152 @@ try {
 }
 ```
 
-## Null / undefined (important gotcha)
+---
 
-You’ll see this:
+## `null` / `undefined` (very important)
 
-```tsx
+```ts
 let user: User | undefined;
 ```
 
-Which means:
+You **must narrow**:
 
-* Could be a `User`
-* Or could be `undefined`
-
-You **must check**:
-
-```tsx
+```ts
 if (!user) {
   throw new Error("User not found");
 }
 ```
 
-TS *forces* you to be explicit — this is a feature.
+This is a **feature**, not a nuisance.
 
-### Ternary operator vs nullish coalescing
+---
 
-```tsx
-return user ? user.name : null;
+### Optional chaining & nullish coalescing
+
+```ts
+user?.name ?? null;
 ```
 
-* Ternary: `condition ? valueIfTrue : valueIfFalse`
-* Safe when `user` itself may be `undefined`
+* `?.` → safe property access
+* `??` → fallback for `null | undefined`
 
-```tsx
-return user?.name ?? null;
+⚠️ Unsafe:
+
+```ts
+user.name ?? null; // crashes if user is undefined
 ```
 
-* Optional chaining (`?.`) safely accesses properties
-* Nullish coalescing (`??`) provides a fallback for `null | undefined`
+---
 
-⚠️ Not safe:
+## Utility Types (high-value interview topic)
 
-```tsx
-return user.name ?? null; // crashes if user is undefined
+### `Partial<T>`
+
+Makes all properties optional.
+
+```ts
+Partial<User>
 ```
 
-## Imports / Exports
+### `Omit<T, K>`
 
-```tsx
+Removes keys.
+
+```ts
+Omit<User, 'type'>
+```
+
+### Combine for filter criteria
+
+```ts
+Partial<Omit<User, 'type'>>
+```
+
+Reads as:
+
+> “Any subset of `User`, excluding `type`.”
+
+---
+
+## Discriminated Unions & Type Guards
+
+```ts
+interface User {
+  type: 'user';
+  occupation: string;
+}
+
+interface Admin {
+  type: 'admin';
+  role: string;
+}
+
+type Person = User | Admin;
+```
+
+Type guards:
+
+```ts
+function isAdmin(p: Person): p is Admin {
+  return p.type === 'admin';
+}
+```
+
+Allows safe narrowing inside conditionals.
+
+---
+
+## Function Overloads (advanced but impressive)
+
+Used when **types depend on argument values**.
+
+```ts
+function filterPersons(
+  persons: Person[],
+  type: 'user',
+  criteria: Partial<Omit<User, 'type'>>
+): User[];
+
+function filterPersons(
+  persons: Person[],
+  type: 'admin',
+  criteria: Partial<Omit<Admin, 'type'>>
+): Admin[];
+```
+
+* Call signature changes based on `'user' | 'admin'`
+* Implementation uses broader types
+* Callers see precise return types
+
+---
+
+## `Object.keys` typing problem & solution
+
+Problem:
+
+```ts
+Object.keys(obj); // string[]
+```
+
+Solution helper:
+
+```ts
+const getObjectKeys = <T>(obj: T) =>
+  Object.keys(obj) as (keyof T)[];
+```
+
+Avoids repetitive casting.
+
+---
+
+## Modules
+
+```ts
 export function add(a: number, b: number) {
   return a + b;
 }
 ```
 
-```tsx
-import { add } from "./math";
+```ts
+import { add } from "./math.js"; // Node ESM
 ```
