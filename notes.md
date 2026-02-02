@@ -1,16 +1,16 @@
-# TypeScript Interview Cheatsheet
+# TypeScript Cheatsheet
 
 ## Variables & Basic Types
 
 ```ts
-let count: number = 5;
-const name: string = "Nina";
+const count: number = 5;
+let name: string = "Nina";
 let isActive: boolean = true;
 ```
 
-* `const` → cannot be reassigned
+* `const` → cannot be reassigned (**prefer by default**)
 * `let` → can be reassigned
-* Prefer `const` by default
+* Avoid `var`
 
 ### Type inference
 
@@ -18,7 +18,7 @@ let isActive: boolean = true;
 const age = 25; // inferred as number
 ```
 
-TypeScript infers types when it’s safe — explicit annotations are optional.
+TypeScript infers types when safe — explicit annotations are optional but useful at boundaries.
 
 ---
 
@@ -33,75 +33,63 @@ function add(a: number, b: number): number {
 Arrow functions:
 
 ```ts
-const add = (a: number, b: number): number => a + b;
+const add = (a: number, b: number) => a + b;
 ```
 
-* Return types are usually inferred
-* Explicit return types are useful for public APIs
+* Return types usually inferred
+* Explicit return types are useful for **public APIs**
 
 ---
 
-## Objects: `type` vs `interface`
+## `type` vs `interface`
 
 ### Rule of thumb
 
-> **Objects & public contracts → `interface`**
-> **Everything else → `type`**
+> **Public object contracts → `interface`**
+> **Exact definitions & composition → `type`**
 
 ---
 
 ### `interface`
 
-Used for **object shapes that may be extended or augmented**.
+Used for **object shapes that may be extended**.
 
 ```ts
 interface User {
+  id: string;
   name: string;
   age?: number;
 }
 ```
 
-Key traits:
+Traits:
 
-* **Open** (supports declaration merging)
-* Extendable via `extends`
-* Preferred for libraries, APIs, React props
-
-```ts
-interface Admin extends User {
-  role: string;
-}
-```
+* Open (supports declaration merging)
+* Extendable (`extends`)
+* Preferred for APIs, libraries, React props
 
 ---
 
 ### `type`
 
-Used for **exact, closed definitions and composition**.
+Used for **closed, exact definitions**.
 
 ```ts
-type UserId = string | number;
-type Status = 'idle' | 'loading' | 'error';
+type UserId = string;
+type Status = "idle" | "loading" | "error";
 ```
 
-Supports:
+Great for:
 
 * unions
 * tuples
-* conditional & mapped types
+* mapped / conditional types
 
 ```ts
 type Result<T> =
-  | { status: 'ok'; value: T }
-  | { status: 'error'; error: string };
+  | { ok: true; value: T }
+  | { ok: false; error: string };
 ```
-
----
-
-### Mental model
-
-* `interface` → “others may build on this”
-* `type` → “this is exactly what this is”
 
 ---
 
@@ -111,18 +99,16 @@ type Result<T> =
 const users: User[] = [];
 ```
 
-Common patterns:
-
 ```ts
 users.map(u => u.name);
 users.filter(u => u.age && u.age > 18);
-users.find(u => u.name === "Alice");
+users.find(u => u.id === "u1");
 ```
 
 Equality:
 
-* `===` → strict equality (**always use**)
-* `==` → loose equality (avoid)
+* `===` → strict (always use)
+* `==` → avoid
 
 ---
 
@@ -154,37 +140,44 @@ Rule:
 
 ## Async / Await
 
-Async functions return `Promise<T>`:
-
 ```ts
 async function getUser(): Promise<User> {
-  return { name: "Alice" };
+  return { id: "1", name: "Alice" };
 }
 ```
-
-Usage:
 
 ```ts
 const user = await getUser();
 ```
 
-⚠️ Forgetting `await` gives `Promise<User>` — common bug.
+⚠️ Forgetting `await` returns `Promise<User>`.
 
 ---
 
-## Error Handling
+## Error Handling & Result Types (high-signal)
+
+Prefer **explicit results** over throwing for expected failures.
 
 ```ts
-try {
-  const user = await getUser();
-} catch (err) {
-  console.error(err);
+type Ok<T> = { ok: true; value: T };
+type Err = { ok: false; error: { message: string; status?: number } };
+type Result<T> = Ok<T> | Err;
+```
+
+```ts
+if (!result.ok) {
+  console.error(result.error.message);
+  return;
 }
 ```
 
+💬 Interview line:
+
+> “I use discriminated unions so error handling is explicit and enforced.”
+
 ---
 
-## `null` / `undefined` (very important)
+## `null` / `undefined`
 
 ```ts
 let user: User | undefined;
@@ -193,130 +186,169 @@ let user: User | undefined;
 You **must narrow**:
 
 ```ts
-if (!user) {
-  throw new Error("User not found");
-}
+if (!user) throw new Error("User not found");
 ```
 
-This is a **feature**, not a nuisance.
-
----
+This is a feature, not friction.
 
 ### Optional chaining & nullish coalescing
 
 ```ts
-user?.name ?? null;
+user?.name ?? "Anonymous";
 ```
 
-* `?.` → safe property access
+* `?.` → safe access
 * `??` → fallback for `null | undefined`
-
-⚠️ Unsafe:
-
-```ts
-user.name ?? null; // crashes if user is undefined
-```
 
 ---
 
-## Utility Types (high-value interview topic)
+## Parsing External Data (VERY important)
 
-### `Partial<T>`
+### `unknown` vs `any`
 
-Makes all properties optional.
+* `any` → disables type safety (avoid)
+* `unknown` → forces validation (use for APIs)
 
-```ts
-Partial<User>
-```
+---
 
-### `Omit<T, K>`
-
-Removes keys.
+### `Record<string, unknown>`
 
 ```ts
-Omit<User, 'type'>
+Record<string, unknown>
 ```
 
-### Combine for filter criteria
+Means:
+
+> “Object with string keys and **untrusted values**.”
+
+Used when parsing API data.
+
+---
+
+### Safe parse pattern
 
 ```ts
-Partial<Omit<User, 'type'>>
+function parseUser(input: unknown): User | null {
+  if (typeof input !== "object" || input === null) return null;
+
+  const record = input as Record<string, unknown>;
+
+  if (typeof record.id !== "string") return null;
+  if (typeof record.name !== "string") return null;
+
+  return { id: record.id, name: record.name };
+}
 ```
 
-Reads as:
+💬 Interview line:
 
-> “Any subset of `User`, excluding `type`.”
+> “I only construct domain types after proving runtime facts.”
+
+---
+
+## Utility Types (high ROI)
+
+```ts
+Partial<T>        // all optional
+Pick<T, K>        // select keys
+Omit<T, K>        // remove keys
+Record<K, V>      // map type
+```
+
+Example:
+
+```ts
+Partial<Omit<User, "id">>
+```
 
 ---
 
 ## Discriminated Unions & Type Guards
 
 ```ts
-interface User {
-  type: 'user';
-  occupation: string;
-}
-
-interface Admin {
-  type: 'admin';
-  role: string;
-}
-
-type Person = User | Admin;
+type Person =
+  | { type: "user"; occupation: string }
+  | { type: "admin"; role: string };
 ```
-
-Type guards:
 
 ```ts
-function isAdmin(p: Person): p is Admin {
-  return p.type === 'admin';
+function isAdmin(p: Person): p is { type: "admin"; role: string } {
+  return p.type === "admin";
 }
 ```
-
-Allows safe narrowing inside conditionals.
 
 ---
 
-## Function Overloads (advanced but impressive)
+## `reduce` (know the patterns)
 
-Used when **types depend on argument values**.
+### Sum
 
 ```ts
-function filterPersons(
-  persons: Person[],
-  type: 'user',
-  criteria: Partial<Omit<User, 'type'>>
-): User[];
-
-function filterPersons(
-  persons: Person[],
-  type: 'admin',
-  criteria: Partial<Omit<Admin, 'type'>>
-): Admin[];
+numbers.reduce((a, b) => a + b, 0);
 ```
 
-* Call signature changes based on `'user' | 'admin'`
-* Implementation uses broader types
-* Callers see precise return types
+### Index by id
+
+```ts
+users.reduce<Record<string, User>>((acc, u) => {
+  acc[u.id] = u;
+  return acc;
+}, {});
+```
+
+### Group by
+
+```ts
+orders.reduce<Record<string, Order[]>>((acc, o) => {
+  acc[o.userId] ??= [];
+  acc[o.userId].push(o);
+  return acc;
+}, {});
+```
+
+💬 Interview note:
+
+> “I use `reduce` when building structures; otherwise `map`/`filter`.”
 
 ---
 
-## `Object.keys` typing problem & solution
+## Testing (Jest / Vitest)
 
-Problem:
+### Matchers
+
+* `toBe` → primitives, identity
+* `toEqual` → objects & arrays
+* `toBeCloseTo` → floats
 
 ```ts
-Object.keys(obj); // string[]
+expect(4.5).toBe(4.5);
+expect({ a: 1 }).toEqual({ a: 1 });
+expect(1.666).toBeCloseTo(1.67, 2);
 ```
 
-Solution helper:
+---
+
+## `as const` (surprisingly important)
 
 ```ts
-const getObjectKeys = <T>(obj: T) =>
+const status = {
+  ok: "ok",
+  error: "error",
+} as const;
+```
+
+* Prevents type widening
+* Enables discriminated unions
+* Makes literals stay literal
+
+---
+
+## `Object.keys` typing fix
+
+```ts
+const getKeys = <T>(obj: T) =>
   Object.keys(obj) as (keyof T)[];
 ```
-
-Avoids repetitive casting.
 
 ---
 
@@ -329,5 +361,16 @@ export function add(a: number, b: number) {
 ```
 
 ```ts
-import { add } from "./math.js"; // Node ESM
+import { add } from "./math.js";
 ```
+
+---
+
+## `type` vs `class`
+
+* `type` → compile-time only, data shapes
+* `class` → runtime behavior, state, identity
+
+**Rule:**
+
+> Use `type` for data, `class` for behavior.
